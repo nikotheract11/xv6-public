@@ -7,6 +7,12 @@
 #include "proc.h"
 #include "spinlock.h"
 
+/*	Global for shared pages		*/
+sh_page shared[32];
+//////////////////////////////////////////
+
+
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -199,6 +205,15 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->pos = curproc->pos;
+
+  /* increase counters of shared pages inherited by parent */
+  for(int i=0;i<32;i++){
+	  if(int j = curproc->pos[i] > 0) {	// means a shared page exists there
+		  j--;				// bcs we stored i + 1 when creating the page at the parent proc so the real position on global array is j - 1
+		 if((int) shmget(shared[j]->key <= 0) return -1;	// get all shared pages from parent
+	  }
+  }
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -241,7 +256,12 @@ exit(void)
       curproc->ofile[fd] = 0;
     }
   }
-
+  for(int i=0;i<32;i++){	// remove all shared pages 
+	  if(int j=curproc->pos[i] > 0){
+		  j--;
+		  shmrem(shared[j]->key);
+	  }
+  }
   begin_op();
   iput(curproc->cwd);
   end_op();
