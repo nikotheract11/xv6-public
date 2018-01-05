@@ -1,12 +1,12 @@
 #include "types.h"
+#include "mmu.h"
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"
-#include "mmu.h"
+//#include "mmu.h"
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-
 /*	Global for shared pages		*/
 sh_page shared[32];
 //////////////////////////////////////////
@@ -25,6 +25,109 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+
+void*
+shmget(sh_key_t key) 
+{
+	int i,counter=0;//,pos;
+	void *va,*pa=0;									// virtual address
+	pde_t *pgdir = myproc()->pgdir;
+	int fe=-1;									// first empty pos
+	char feflag=0;									// first empty space flag
+
+	for(i=0;i<32;i++){
+		if(shared[i].counter == 0 && !feflag){
+			fe = i;
+			feflag = 1;
+			continue;
+		}
+		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,16)){
+			counter = shared[i].counter;
+			pa = shared[i].pa;
+//			exists = 1;
+			if(feflag) 
+				break;	
+			else 
+				continue;
+		}
+	}
+	if((i >= 32 && !feflag) || counter >= 16) return (void*)-1;						// 32 shared page allready
+	//else if( i >= 32) i = fe;
+	if(counter == 0 && feflag) {
+		i = fe;
+		strncpy(key,shared[fe].key,16);// = key;
+		pa = kalloc();
+		if(pa == 0) {
+			cprintf("System out of Memory\n");
+			return (void*)-1;
+		}
+		else
+			cprintf("pa=%d\n",(int)V2P(pa));
+		shared[fe].pa = pa;
+		// memset needed?
+		memset(pa,0,PGSIZE);
+	}
+	int j;
+	for( j=0;j<32;j++){
+		if (myproc()->pos[j] <= 0) {
+			myproc()->pos[j] = i+1; 					// i+1 to identify if this pos contains data or 0 from initialization
+			break;
+		}
+	}
+	va = (void*) (KERNBASE - (j+1)*PGSIZE);
+	if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0)
+		return (void*)-1;
+	int k;
+	for(k=0;k<16;k++)
+		if(shared[i].pairs[k].pos==0)
+			break;
+	if(k>=16) {
+		cprintf("16 procs allready on this sh_page!\n");
+		return (void*)-1;
+	}
+
+
+	shared[i].pairs[k].pid = myproc()->pid; 				// do i need proc pointer?		========================= find right pos for pid, this is wrong =============================
+	shared[i].pairs[k].pos = j;						// with j known, va = KERNBASE - (j+1)*PGSIZE
+	shared[i].counter++;
+
+
+	if((int*)va==0)
+		cprintf("-----------);");
+	return va;
+}
+
+int
+shmrem(sh_key_t key){
+        int i;
+        for(i=0;i<32;i++){
+                if(shared[i].counter == 0)
+                        continue;
+                if(!strncmp(shared[i].key,key,16))
+			break;
+	}
+	int pos=0;
+	if(i >= 32) 
+		return -1;
+        for(int j=0;j<16;j++){
+                if (shared[i].pairs[j].pid == myproc()->pid){
+                        pos = shared[i].pairs[j].pos;
+			shared[i].pairs[j].pos = 0;
+                }
+                shared[i].counter--;
+                pte_t *p ;
+		p = walk(myproc()->pgdir,(void*)(KERNBASE-myproc()->pos[pos]*PGSIZE),0);
+                *p = 0;
+                myproc()->pos[pos] = -1;                                         // free space for other sp
+        }
+        if(shared[i].counter == 0) {                                            // if last, free pa
+                kfree(shared[i].pa);
+                //shared[i].counter = 0;
+                return 0;
+        }
+	return 0;
+}
 
 void
 pinit(void)
@@ -205,13 +308,22 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
-  np->pos = curproc->pos;
+  *(np->pos) = *(curproc->pos);
 
   /* increase counters of shared pages inherited by parent */
   for(int i=0;i<32;i++){
-	  if(int j = curproc->pos[i] > 0) {	// means a shared page exists there
+	  int j;
+	  if((j = curproc->pos[i]) > 0) {	// means a shared page exists there
 		  j--;				// bcs we stored i + 1 when creating the page at the parent proc so the real position on global array is j - 1
-		 if((int) shmget(shared[j]->key <= 0) return -1;	// get all shared pages from parent
+		  int k;	//if((int) shmget(shared[j]->key <= 0) return -1;	// get all shared pages from parent
+		  for(k=0;k<16;k++)
+			  if(shared[j].pairs[k].pos == 0)
+				  break;
+		  if(k<16) {
+			  shared[j].pairs[k].pid = np->pid;
+			  shared[j].pairs[k].pos = i;		// ============= i is ok>?  ============= //
+			  shared[j].counter++;
+		  }
 	  }
   }
 
@@ -257,11 +369,12 @@ exit(void)
     }
   }
   for(int i=0;i<32;i++){	// remove all shared pages 
-	  if(int j=curproc->pos[i] > 0){
+	  int j;
+	  if( (j=curproc->pos[i]) > 0){
 		  j--;
-		  shmrem(shared[j]->key);
+		  shmrem(shared[j].key);
 	  }
-  }
+  } 
   begin_op();
   iput(curproc->cwd);
   end_op();

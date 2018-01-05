@@ -287,9 +287,9 @@ freevm(pde_t *pgdir)
 
   if(pgdir == 0)
     panic("freevm: no pgdir");
-  deallocuvm(pgdir, KERNBASE, 0);
+  deallocuvm(pgdir, KERNBASE,0);//-33*PGSIZE, 0);	// ==================== 33 OR 32 ? ==================== //
   for(i = 0; i < NPDENTRIES; i++){
-    if(pgdir[i] & PTE_P){
+    if(pgdir[i] & PTE_P){			// =============== this kfree() affects? ===============
       char * v = P2V(PTE_ADDR(pgdir[i]));
       kfree(v);
     }
@@ -322,6 +322,13 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
+  for(i = KERNBASE - PGSIZE; i >= KERNBASE - 33*PGSIZE; i-= PGSIZE){		// ==========	check condition ========== //
+	  if((pte = walkpgdir(pgdir, (void *) i, 0)) != 0) {
+		  pa = PTE_ADDR(*pte);
+		  flags = PTE_FLAGS(*pte);
+		  mappages(d,(void*)i,PGSIZE,V2P(pa),flags);		// ====== V2P(pa) needed? ====== //
+	  }
+  }
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
@@ -389,4 +396,11 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 // Blank page.
 //PAGEBREAK!
 // Blank page.
+ pte_t * walk(pde_t *pgdir,const void* va, int alloc)
+{
+	 return walkpgdir(pgdir,va,alloc);
+}
 
+int map(pde_t *pgdir, void *va, uint size, uint pa, int perm){
+	return mappages(pgdir,va,size,pa,perm);
+}
