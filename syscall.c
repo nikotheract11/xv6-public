@@ -105,6 +105,9 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_shmget(void);
 extern int sys_shmrem(void);
+extern int sys_sem_init(void);
+extern int sys_sem_up(void);
+extern int sys_sem_down(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -130,6 +133,9 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_shmget]  sys_shmget,
 [SYS_shmrem]  sys_shmrem,
+[SYS_sem_init] sys_sem_init,
+[SYS_sem_up]  sys_sem_up,
+[SYS_sem_down] sys_sem_down,
 };
 
 void

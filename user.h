@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+struct sem_t;
 
 // system calls
 int fork(void);
@@ -23,8 +24,11 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-void* shmget(char*);
+void* shmget(int b,char a[16]);
 int shmrem(char*);
+void sem_init(struct sem_t*,int);
+void sem_up(struct sem_t*);
+void sem_down(struct sem_t*);
 
 // ulib.c
 int stat(char*, struct stat*);

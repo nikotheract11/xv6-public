@@ -10,7 +10,7 @@
 /*	Global for shared pages		*/
 sh_page shared[32];
 //////////////////////////////////////////
-
+struct spinlock slk;
 
 
 struct {
@@ -28,24 +28,28 @@ static void wakeup1(void *chan);
 
 
 void*
-shmget(sh_key_t key) 
+shmget(char key[16]) 
 {
 	int i,counter=0;//,pos;
 	void *va,*pa=0;									// virtual address
 	pde_t *pgdir = myproc()->pgdir;
 	int fe=-1;									// first empty pos
 	char feflag=0;									// first empty space flag
-
+	acquire(&slk);
+//	for(i=0;i<32;i++) cprintf("key:%s\t",(char *)shared[i].key);
+	cprintf("\n");
 	for(i=0;i<32;i++){
 		if(shared[i].counter == 0 && !feflag){
 			fe = i;
 			feflag = 1;
 			continue;
 		}
-		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,16)){
+//		cprintf("counter=%d\n",shared[i].counter);
+		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,15)){
 			counter = shared[i].counter;
 			pa = shared[i].pa;
 //			exists = 1;
+			cprintf("counter=%d\n",shared[i].counter);			
 			if(feflag) 
 				break;	
 			else 
@@ -56,7 +60,7 @@ shmget(sh_key_t key)
 	//else if( i >= 32) i = fe;
 	if(counter == 0 && feflag) {
 		i = fe;
-		strncpy(key,shared[fe].key,16);// = key;
+		strncpy(shared[fe].key,key,16);// = key;
 		pa = kalloc();
 		if(pa == 0) {
 			cprintf("System out of Memory\n");
@@ -90,17 +94,22 @@ shmget(sh_key_t key)
 
 	shared[i].pairs[k].pid = myproc()->pid; 				// do i need proc pointer?		========================= find right pos for pid, this is wrong =============================
 	shared[i].pairs[k].pos = j;						// with j known, va = KERNBASE - (j+1)*PGSIZE
-	shared[i].counter++;
+	(shared[i].counter)++;
 
 
 	if((int*)va==0)
 		cprintf("-----------);");
+	for(i=0;i<32;i++) cprintf("%s\t",shared[i].key);
+        cprintf("\n");
+
+	release(&slk);
 	return va;
 }
 
 int
 shmrem(sh_key_t key){
         int i;
+	acquire(&slk);
         for(i=0;i<32;i++){
                 if(shared[i].counter == 0)
                         continue;
@@ -114,8 +123,9 @@ shmrem(sh_key_t key){
                 if (shared[i].pairs[j].pid == myproc()->pid){
                         pos = shared[i].pairs[j].pos;
 			shared[i].pairs[j].pos = 0;
-                }
-                shared[i].counter--;
+                
+                	(shared[i].counter)--;
+		}
                 pte_t *p ;
 		p = walk(myproc()->pgdir,(void*)(KERNBASE-myproc()->pos[pos]*PGSIZE),0);
                 *p = 0;
@@ -124,8 +134,10 @@ shmrem(sh_key_t key){
         if(shared[i].counter == 0) {                                            // if last, free pa
                 kfree(shared[i].pa);
                 //shared[i].counter = 0;
-                return 0;
+	//	release(&slk);
+          //      return 0;
         }
+	release(&slk);
 	return 0;
 }
 
@@ -309,7 +321,7 @@ fork(void)
   np->parent = curproc;
   *np->tf = *curproc->tf;
   *(np->pos) = *(curproc->pos);
-
+  acquire(&slk);
   /* increase counters of shared pages inherited by parent */
   for(int i=0;i<32;i++){
 	  int j;
@@ -326,6 +338,7 @@ fork(void)
 		  }
 	  }
   }
+  release(&slk);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -357,7 +370,7 @@ exit(void)
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
-
+  cprintf("%s exiting\n",myproc()->name);
   if(curproc == initproc)
     panic("init exiting");
 
