@@ -39,26 +39,31 @@ void rel_r(char *addr){
 	int
 main(void)
 {
-        char key[16]="11111111111";
+        char key[15]="11111111111";
         char *addr;
         addr = (char*)shmget(21,key);
-	for(int i=0;i<10000000;i++){
-		for(int j=1;j<100000000;j++){
-			float a=0.1;
-			a*=i;
-			a/=j;
-		}
-	}
+	for(int i=0;i<100000000;i++){
+                for(int j=1;j<100000000;j++){
+                        for(int h=0;h<100000000;h++){
+                                float a=0.1;
+                                a*=i;
+                                a/=j;
+                        }
+                }
+        }
+
 	int i,j=3;
 	memmove(&i,&j,sizeof(int));
-        printf(1,"i=%d\n",i);
+       // printf(1,"i=%d\n",i);
+//	acq_r(addr);
 	memmove(&i,addr,sizeof(int));
-	char key2[16]="42342342";
-	char *add=shmget(1,key2);
+//	rel_r(addr);
+//	char key2[16]="42342342";
+//	char *add=shmget(1,key2);
 //	char f;
 //	gets(&f,100);
-	memmove(&j,add,sizeof(int));
-	printf(1,"strcmp=%d, j=%d\n",i,j);
+//	memmove(&j,add,sizeof(int));
+	printf(1,"+++++=%d\n",i);
         exit();
 }
 

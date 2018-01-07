@@ -101,13 +101,15 @@ sys_shmget(void)
 	//int b = strncmp(key,key2,15);
 //	cprintf("dif=%s\n",key);
 //	shmget(key);
-	return (int)shmget(key);
+	int ad = (int)shmget(key);
+	if(ad<0) cprintf("ERROR=============================\n");
+	return ad;
 
 
 
 }
 int sys_shmrem(void){
-	sh_key_t key;
-        argptr(0,(char**)&key,16);
+	char* key;
+        argptr(1,&key,16*sizeof(char));
 	return (int)shmrem(key);
 }

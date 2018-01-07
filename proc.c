@@ -35,12 +35,19 @@ shmget(char key[16])
 	pde_t *pgdir = myproc()->pgdir;
 	int fe=-1;									// first empty pos
 	char feflag=0;									// first empty space flag
-	acquire(&slk);
-//	for(i=0;i<32;i++) cprintf("key:%s\t",(char *)shared[i].key);
+//	acquire(&slk);
+//	for(i=0;i<32;i++) cprintf("%d\t",shared[i].counter);
 	cprintf("\n");
+	for(i=0;i<32;i++){
+                if(shared[i].counter != 0){
+			cprintf("s=%s\tkey=%s\tcmp=%d\n",shared[i].key,key,strncmp(shared[i].key,key,15));
+		}
+	}
+
 	for(i=0;i<32;i++){
 		if(shared[i].counter == 0 && !feflag){
 			fe = i;
+//			cprintf("fe=%d\n",fe);
 			feflag = 1;
 			continue;
 		}
@@ -49,7 +56,7 @@ shmget(char key[16])
 			counter = shared[i].counter;
 			pa = shared[i].pa;
 //			exists = 1;
-			cprintf("counter=%d\n",shared[i].counter);			
+//			cprintf("counter=%d\n",shared[i].counter);			
 			if(feflag) 
 				break;	
 			else 
@@ -58,9 +65,10 @@ shmget(char key[16])
 	}
 	if((i >= 32 && !feflag) || counter >= 16) return (void*)-1;						// 32 shared page allready
 	//else if( i >= 32) i = fe;
+//	cprintf("i=%d\n",i);
 	if(counter == 0 && feflag) {
 		i = fe;
-		strncpy(shared[fe].key,key,16);// = key;
+		strncpy(shared[fe].key,key,15);// = key;
 		pa = kalloc();
 		if(pa == 0) {
 			cprintf("System out of Memory\n");
@@ -93,27 +101,28 @@ shmget(char key[16])
 
 
 	shared[i].pairs[k].pid = myproc()->pid; 				// do i need proc pointer?		========================= find right pos for pid, this is wrong =============================
-	shared[i].pairs[k].pos = j;						// with j known, va = KERNBASE - (j+1)*PGSIZE
-	(shared[i].counter)++;
+	shared[i].pairs[k].pos = j+1;						// with j known, va = KERNBASE - (j+1)*PGSIZE
+	shared[i].counter=++counter;
+//	cprintf("incr=%d,%d\n",i,shared[i].counter);
 
-
+	
 	if((int*)va==0)
 		cprintf("-----------);");
-	for(i=0;i<32;i++) cprintf("%s\t",shared[i].key);
+//	for(i=0;i<32;i++) cprintf("%d\t",shared[i].counter);
         cprintf("\n");
 
-	release(&slk);
+//	release(&slk);
 	return va;
 }
 
 int
-shmrem(sh_key_t key){
+shmrem(char key[16]){
         int i;
-	acquire(&slk);
+//	acquire(&slk);
         for(i=0;i<32;i++){
                 if(shared[i].counter == 0)
                         continue;
-                if(!strncmp(shared[i].key,key,16))
+                if(!strncmp(shared[i].key,key,15))
 			break;
 	}
 	int pos=0;
@@ -121,10 +130,10 @@ shmrem(sh_key_t key){
 		return -1;
         for(int j=0;j<16;j++){
                 if (shared[i].pairs[j].pid == myproc()->pid){
-                        pos = shared[i].pairs[j].pos;
+                        pos = --shared[i].pairs[j].pos;
 			shared[i].pairs[j].pos = 0;
                 
-                	(shared[i].counter)--;
+                	shared[i].counter--;
 		}
                 pte_t *p ;
 		p = walk(myproc()->pgdir,(void*)(KERNBASE-myproc()->pos[pos]*PGSIZE),0);
@@ -132,12 +141,13 @@ shmrem(sh_key_t key){
                 myproc()->pos[pos] = -1;                                         // free space for other sp
         }
         if(shared[i].counter == 0) {                                            // if last, free pa
+		cprintf("kfree=====\n");
                 kfree(shared[i].pa);
                 //shared[i].counter = 0;
 	//	release(&slk);
           //      return 0;
         }
-	release(&slk);
+//	release(&slk);
 	return 0;
 }
 
@@ -387,12 +397,13 @@ exit(void)
 		  j--;
 		  shmrem(shared[j].key);
 	  }
-  } 
+  }
+  //cprintf("1a\n");
   begin_op();
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
-
+  //cprintf("1aa\n");
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
@@ -406,7 +417,7 @@ exit(void)
         wakeup1(initproc);
     }
   }
-
+//cprintf("1aaa\n");
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();

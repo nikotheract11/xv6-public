@@ -7,6 +7,10 @@ struct a{
 	int val;
 	int pos[10];
 } A[10];
+
+void acq_w(char *addr);
+void rel_w(char *addr);
+void setupsems(char* addr);
 int
 main(void)
 {
@@ -14,17 +18,23 @@ main(void)
 	sem_init(&sem,9);
 	char key[15]="11111111111";
 	char *addr;
+	
 	addr = (char*)shmget(11,key);
-	int i=1997,offset=0;
-	setupsems(addr);
+	int i=1997;
+//	setupsems(addr);
+//	acq_w(addr);
+	memmove(addr,&i,sizeof(int));
+//	rel_w(addr);
 	for(i=0;i<10;i++){
 		if(A[i].val != 0) printf(1,"--------------\n");
 	}
 	for(int i=0;i<100000000;i++){
                 for(int j=1;j<1000000000;j++){
-                        float a=0.1;
-                        a*=i;
-                        a/=j;
+			for(int h=0;h<10000000000;h++){
+                        	float a=0.1;
+	                        a*=i;
+        	                a/=j;
+			}
                 }
         }
 //	char f;
@@ -32,7 +42,7 @@ main(void)
 	int j;
 	memmove(&j,addr,sizeof(int));
 
-	printf(1,"%d,iii=%d\n",(int)addr,j);
+	printf(1,"iii=%d\n",j);
 	exit();
 }
 
