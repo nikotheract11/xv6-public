@@ -28,90 +28,50 @@ static void wakeup1(void *chan);
 
 
 void*
-shmget(char key[16]) 
+shmget(char key[16])
 {
-	int i,counter=0;//,pos;
-	void *va,*pa=0;									// virtual address
-	pde_t *pgdir = myproc()->pgdir;
-	int fe=-1;									// first empty pos
-	char feflag=0;									// first empty space flag
-//	acquire(&slk);
-//	for(i=0;i<32;i++) cprintf("%d\t",shared[i].counter);
-	cprintf("\n");
-	for(i=0;i<32;i++){
-                if(shared[i].counter != 0){
-			cprintf("s=%s\tkey=%s\tcmp=%d\n",shared[i].key,key,strncmp(shared[i].key,key,15));
-		}
-	}
+        int i,counter=0;//,pos;
+        void *va,*pa=0;                                                                 // virtual address
+        pde_t *pgdir = myproc()->pgdir;                                                                     // first empty pos
+        char feflag=0;
 
 	for(i=0;i<32;i++){
-		if(shared[i].counter == 0 && !feflag){
-			fe = i;
-//			cprintf("fe=%d\n",fe);
-			feflag = 1;
-			continue;
-		}
-//		cprintf("counter=%d\n",shared[i].counter);
 		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,15)){
+			feflag = 1;
 			counter = shared[i].counter;
 			pa = shared[i].pa;
-//			exists = 1;
-//			cprintf("counter=%d\n",shared[i].counter);			
-			if(feflag) 
-				break;	
-			else 
-				continue;
+			break;
 		}
 	}
-	if((i >= 32 && !feflag) || counter >= 16) return (void*)-1;						// 32 shared page allready
-	//else if( i >= 32) i = fe;
-//	cprintf("i=%d\n",i);
-	if(counter == 0 && feflag) {
-		i = fe;
-		strncpy(shared[fe].key,key,15);// = key;
+	if(feflag == 0)
+		for(i=0;i<32;i++)
+			if(shared[i].counter == 0) break;
+	if(i<0 || i>=32) return (void*)-1;
+	if(feflag == 0){
+		strncpy(shared[i].key,key,15);
 		pa = kalloc();
-		if(pa == 0) {
-			cprintf("System out of Memory\n");
-			return (void*)-1;
-		}
-		else
-			cprintf("pa=%d\n",(int)V2P(pa));
-		shared[fe].pa = pa;
-		// memset needed?
+		shared[i].pa=pa;
 		memset(pa,0,PGSIZE);
 	}
 	int j;
-	for( j=0;j<32;j++){
+	for( j=0;j<32;j++){ 
 		if (myproc()->pos[j] <= 0) {
-			myproc()->pos[j] = i+1; 					// i+1 to identify if this pos contains data or 0 from initialization
+			myproc()->pos[j] = i+1;
 			break;
 		}
 	}
-	va = (void*) (KERNBASE - (j+1)*PGSIZE);
-	if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0)
-		return (void*)-1;
+	va = (void*) (KERNBASE - (j+1)*PGSIZE); 
+	if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0) return (void*)-1;
 	int k;
 	for(k=0;k<16;k++)
-		if(shared[i].pairs[k].pos==0)
+		if(shared[i].pairs[k].pos==0) 
 			break;
-	if(k>=16) {
-		cprintf("16 procs allready on this sh_page!\n");
-		return (void*)-1;
-	}
-
-
-	shared[i].pairs[k].pid = myproc()->pid; 				// do i need proc pointer?		========================= find right pos for pid, this is wrong =============================
-	shared[i].pairs[k].pos = j+1;						// with j known, va = KERNBASE - (j+1)*PGSIZE
+	shared[i].pairs[k].pid = myproc()->pid;
+	shared[i].pairs[k].pos = j+1;
 	shared[i].counter=++counter;
-//	cprintf("incr=%d,%d\n",i,shared[i].counter);
 
-	
-	if((int*)va==0)
-		cprintf("-----------);");
-//	for(i=0;i<32;i++) cprintf("%d\t",shared[i].counter);
-        cprintf("\n");
-
-//	release(&slk);
+	for(i=0;i<32;i++)
+		cprintf("%d  ",shared[i].counter);
 	return va;
 }
 
