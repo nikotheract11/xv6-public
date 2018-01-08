@@ -18,7 +18,7 @@ main(void)
 	sem_t r_sem,w_sem;
 	char *addr;
 	struct sh_key key;
-	strcpy(key.key,"11111111111");
+	strcpy(key.key,"1111111111111111");//	strcpy(key.key,"01111111110911");
 	
 	if((addr = (char*)shmget(&key))<(char*)0) exit();
 	int i=1997;

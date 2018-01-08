@@ -93,7 +93,7 @@ sys_uptime(void)
 int
 sys_shmget(void) 
 {
-	char *key2
+	char *key2;
 	sh_key_t key;
 	argptr(0,&key2,sizeof(sh_key_t));
 	key = (sh_key_t) key2;

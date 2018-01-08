@@ -10,7 +10,7 @@ struct pair {
 
 typedef struct pair pair;
 struct sh_page {
-	sh_key_t key;
+	struct sh_key key;
 	pair pairs[16];
 	int counter;
 	void* pa;

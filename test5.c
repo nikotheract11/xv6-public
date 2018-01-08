@@ -18,14 +18,13 @@ main(void)
 	sem_t r_sem,w_sem;
 	char *addr;
 	struct sh_key key;
-        strcpy(key.key,"11111111111");//	strcpy(key.key,"1110000001111111");
-	printf(1,"s=%s\n",key.key);
+        strcpy(key.key,"1a11000011111111");
 	if((addr = (char*)shmget(&key))<(char*)0) exit();
 	char buff[100] = "This is a shared memory test";
 	addr=setupsems(addr,&r_sem,&w_sem);
 
 	acq_w(addr,&w_sem);
-	strcpy(addr,buff);//,100*sizeof(char));
+	strcpy(addr,buff);
 	rel_w(addr,&w_sem);
 	printf(1,"s=%s\n",addr);
 

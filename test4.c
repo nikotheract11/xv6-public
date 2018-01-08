@@ -19,6 +19,7 @@ void rel_w(char* addr,sem_t *w_sem){
 }
 void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
         int readers=0;
+	memmove(&readers,&addr[sizeof(char)+2*sizeof(sem_t)],sizeof(int));
         sem_down(r_sem);
         memmove(addr + sizeof(char),r_sem,sizeof(sem_t));
 
@@ -35,7 +36,8 @@ void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
 }
 
 void rel_r(char *addr,sem_t *r_sem,sem_t *w_sem){
-        int readers=1;
+        int readers;
+	memmove(&readers,&addr[sizeof(char)+2*sizeof(sem_t)],sizeof(int));
         sem_down(r_sem);
         memmove(addr + sizeof(char),r_sem,sizeof(sem_t));
 
@@ -55,7 +57,7 @@ int
 main(void)
 {
 	struct sh_key key;
-        strcpy(key.key,"11111111111");
+        strcpy(key.key,"11111111111111111");
         char *addr;
         addr = (char*)shmget(&key);
         if((int)addr == -1) exit();

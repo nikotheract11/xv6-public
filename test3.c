@@ -6,6 +6,7 @@
 #include "structs.h"
 void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
         int readers=0;
+	memmove(&readers,&addr[sizeof(char)+2*sizeof(sem_t)],sizeof(int));
         sem_down(r_sem);
         memmove(addr + sizeof(char),r_sem,sizeof(sem_t));
 
@@ -22,7 +23,8 @@ void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
 }
 
 void rel_r(char *addr,sem_t *r_sem,sem_t *w_sem){
-        int readers=1;
+        int readers;
+	memmove(&readers,&addr[sizeof(char)+2*sizeof(sem_t)],sizeof(int));
         sem_down(r_sem);
         memmove(addr + sizeof(char),r_sem,sizeof(sem_t));
 
@@ -42,7 +44,7 @@ int
 main(void)
 {
 	struct sh_key key;
-	strcpy(key.key,"11111111111");
+	strcpy(key.key,"1111111111111111");
 	char *add=(char*)shmget(&key);
 	if((int)add < 0) exit();
 	int i;

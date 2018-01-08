@@ -48,7 +48,7 @@ int
 main(void)
 {
 	struct sh_key key;
-	strcpy(key.key,"11111111111");
+	strcpy(key.key,"1111111111111111");
         char *addr;
         addr = (char*)shmget(&key);
 	if((int)addr == -1) exit();

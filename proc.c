@@ -34,10 +34,16 @@ shmget(sh_key_t key)
         void *va,*pa=0;                                                                 // virtual address
         pde_t *pgdir = myproc()->pgdir;                                                                     // first empty pos
         char feflag=0;
+	char *op=key->key;
+	while(op[counter] != '\0') counter++;
+	if (counter<16) {
+		cprintf("Key unsafe\n");
+		return (void*) -1;
+	}
+	counter = 0;
 	acquire(&slk);
 	for(i=0;i<32;i++){
-		if(shared[i].counter != 0) cprintf("k=%s\n",(shared[i].key)->key);
-		if(shared[i].counter != 0 && !strncmp(key->key,(shared[i].key)->key,15)){
+		if(shared[i].counter != 0 && strncmp(key->key,(shared[i].key).key,16)==0){
 			feflag = 1;
 			counter = shared[i].counter;
 			pa = shared[i].pa;
@@ -53,7 +59,7 @@ shmget(sh_key_t key)
 		return (void*)-1;
 	}
 	if(feflag == 0){
-		shared[i].key=key;
+		strncpy((shared[i].key).key,key->key,16);
 		pa = kalloc();
 		shared[i].pa=pa;
 		memset(pa,0,PGSIZE);
@@ -94,7 +100,6 @@ shmget(sh_key_t key)
 	shared[i].pairs[k].pid = myproc()->pid;
 	shared[i].pairs[k].pos = j+1;
 	shared[i].counter=++counter;
-	cprintf("counter=%d\n",shared[i].counter);
 	release(&slk);
 	return va;
 }
@@ -106,7 +111,7 @@ shmrem(sh_key_t key){
         for(i=0;i<32;i++){
                 if(shared[i].counter == 0)
                         continue;
-                if(!strncmp(shared[i].key->key,key->key,15))
+                if(!strncmp(shared[i].key.key,key->key,15))
 			break;
 	}
 	int pos=0;
@@ -322,13 +327,13 @@ fork(void)
 	  int j;
 	  if((j = curproc->pos[i]) > 0) {	// means a shared page exists there
 		  j--;				// bcs we stored i + 1 when creating the page at the parent proc so the real position on global array is j - 1
-		  int k;	//if((int) shmget(shared[j]->key <= 0) return -1;	// get all shared pages from parent
+		  int k;	 		// get all shared pages from parent
 		  for(k=0;k<16;k++)
 			  if(shared[j].pairs[k].pos == 0)
 				  break;
 		  if(k<16 && shared[j].counter < 31) {
 			  shared[j].pairs[k].pid = np->pid;
-			  shared[j].pairs[k].pos = i+1;		// ============= i is ok>?  ============= //
+			  shared[j].pairs[k].pos = i+1;	
 			  shared[j].counter++;
 		  }
 		  else{
@@ -388,15 +393,13 @@ exit(void)
 	  int j;
 	  if( (j=curproc->pos[i]) > 0){
 		  j--;
-		  shmrem(shared[j].key);
+		  shmrem(&shared[j].key);
 	  }
   }
-  //cprintf("1a\n");
   begin_op();
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
-  //cprintf("1aa\n");
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
