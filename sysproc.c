@@ -93,23 +93,24 @@ sys_uptime(void)
 int
 sys_shmget(void) 
 {
-	char *key;//[17];
-//	char key2[16]="11111111111";
-//	int n;
-//	argint(0,&n);
-	argptr(1,&key,16*sizeof(char));
-	//int b = strncmp(key,key2,15);
-//	cprintf("dif=%s\n",key);
-//	shmget(key);
+	char *key2;//[17];
+	sh_key_t key;
+	argptr(0,&key2,sizeof(sh_key_t));
+	key = (sh_key_t) key2;
 	int ad = (int)shmget(key);
-	if(ad<0) cprintf("ERROR=============================\n");
+	if(ad<0) 
+		return -1;
+	
 	return ad;
 
 
 
 }
 int sys_shmrem(void){
-	char* key;
-        argptr(1,&key,16*sizeof(char));
-	return (int)shmrem(key);
+	sh_key_t key;
+        argptr(0,(char**)&key,sizeof(sh_key_t));
+	int ad = (int)shmrem(key);
+	if(ad<0)
+		return -1;
+	return ad;
 }

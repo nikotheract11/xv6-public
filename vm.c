@@ -287,9 +287,9 @@ freevm(pde_t *pgdir)
 
   if(pgdir == 0)
     panic("freevm: no pgdir");
-  deallocuvm(pgdir, KERNBASE-33*PGSIZE, 0);	// ==================== 33 OR 32 ? ==================== //
+  deallocuvm(pgdir, KERNBASE-33*PGSIZE, 0);	// ==================== Change this so shared pages remain after exit ==================== //
   for(i = 0; i < NPDENTRIES; i++){
-    if(pgdir[i] & PTE_P){			// =============== this kfree() affects? ===============
+    if(pgdir[i] & PTE_P){			
       char * v = P2V(PTE_ADDR(pgdir[i]));
       kfree(v);
     }
@@ -322,11 +322,11 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  for(i = KERNBASE - PGSIZE; i >= KERNBASE - 33*PGSIZE; i-= PGSIZE){		// ==========	check condition ========== //
+  for(i = KERNBASE - PGSIZE; i >= KERNBASE - 33*PGSIZE; i-= PGSIZE){		// ==========	copy shared pages ========== //
 	  if((pte = walkpgdir(pgdir, (void *) i, 0)) != 0) {
 		  pa = PTE_ADDR(*pte);
 		  flags = PTE_FLAGS(*pte);
-		  mappages(d,(void*)i,PGSIZE,V2P(pa),flags);		// ====== V2P(pa) needed? ====== //
+		  mappages(d,(void*)i,PGSIZE,V2P(pa),flags);		
 	  }
   }
   for(i = 0; i < sz; i += PGSIZE){

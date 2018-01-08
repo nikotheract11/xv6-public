@@ -28,7 +28,7 @@ static void wakeup1(void *chan);
 
 
 void*
-shmget(char key[16])
+shmget(sh_key_t key)
 {
         int i,counter=0;//,pos;
         void *va,*pa=0;                                                                 // virtual address
@@ -36,7 +36,7 @@ shmget(char key[16])
         char feflag=0;
 	acquire(&slk);
 	for(i=0;i<32;i++){
-		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,15)){
+		if(shared[i].counter != 0 && !strncmp(key->key,(shared[i].key)->key,15)){
 			feflag = 1;
 			counter = shared[i].counter;
 			pa = shared[i].pa;
@@ -46,9 +46,14 @@ shmget(char key[16])
 	if(feflag == 0)
 		for(i=0;i<32;i++)
 			if(shared[i].counter == 0) break;
-	if(i<0 || i>=32) return (void*)-1;
+	if(i>=32){
+		cprintf("ERROR : 32 shared pages already\n");
+		release(&slk);
+		return (void*)-1;
+	}
 	if(feflag == 0){
-		strncpy(shared[i].key,key,15);
+		//strncpy(shared[i].key,key->key,15);
+		shared[i].key=key;
 		pa = kalloc();
 		shared[i].pa=pa;
 		memset(pa,0,PGSIZE);
@@ -60,41 +65,62 @@ shmget(char key[16])
 			break;
 		}
 	}
-	va = (void*) (KERNBASE - (j+1)*PGSIZE); 
-	if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0) return (void*)-1;
+	//va = (void*) (KERNBASE - (j+1)*PGSIZE); 
+	//if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0) return (void*)-1;
 	int k;
 	for(k=0;k<16;k++)
 		if(shared[i].pairs[k].pos==0) 
 			break;
+	if(k>=16) {
+		cprintf("ERROR : 16 procs in this shared page already\n");
+		myproc()->pos[j] = 0;
+		if(feflag==0){
+			shared[i].counter=0;	// free place
+			kfree(pa);
+		}
+		release(&slk);
+		return (void*) -1;
+	}
+	
+	va = (void*) (KERNBASE - (j+1)*PGSIZE); 
+        if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0) {
+		cprintf("ERROR : map failed\n");
+		if(feflag==0){
+                        shared[i].counter=0;        // free place
+                        kfree(pa);
+                }
+		release(&slk);
+		return (void*)-1;
+	}
+
 	shared[i].pairs[k].pid = myproc()->pid;
 	shared[i].pairs[k].pos = j+1;
 	shared[i].counter=++counter;
 	release(&slk);
-	for(i=0;i<32;i++)
-		cprintf("%d  ",shared[i].counter);
 	return va;
 }
 
 int
-shmrem(char key[16]){
+shmrem(sh_key_t key){
         int i;
-	//acquire(&slk);
+	acquire(&slk);
         for(i=0;i<32;i++){
                 if(shared[i].counter == 0)
                         continue;
-                if(!strncmp(shared[i].key,key,15))
+                if(!strncmp(shared[i].key->key,key->key,15))
 			break;
 	}
 	int pos=0;
-	if(i >= 32) 
+	if(i >= 32) {
+		cprintf("ERROR : (rem) key not found\n");
+		release(&slk);
 		return -1;
+	}
         for(int j=0;j<16;j++){
                 if (shared[i].pairs[j].pid == myproc()->pid){
                         pos = --shared[i].pairs[j].pos;
 			shared[i].pairs[j].pos = 0;
-                
                 	shared[i].counter--;
-			cprintf("rem=%d\n",shared[i].counter);
 		}
                 pte_t *p ;
 		p = walk(myproc()->pgdir,(void*)(KERNBASE-(myproc()->pos[pos])*PGSIZE),0);
@@ -102,16 +128,13 @@ shmrem(char key[16]){
                 myproc()->pos[pos] = -1;                                         // free space for other sp
         }
         if(shared[i].counter == 0) {                                            // if last, free pa
-		cprintf("kfree=====\n");
                 kfree(shared[i].pa);
-		cprintf("kfree=====\n");
 
-                //shared[i].counter = 0;
-	//	release(&slk);
-          //      return 0;
+		release(&slk);
+                return 0;
         }
-	//release(&slk);
-	return 0;
+	release(&slk);
+	return 1;
 }
 
 void
@@ -304,10 +327,18 @@ fork(void)
 		  for(k=0;k<16;k++)
 			  if(shared[j].pairs[k].pos == 0)
 				  break;
-		  if(k<16) {
+		  if(k<16 && shared[j].counter < 31) {
 			  shared[j].pairs[k].pid = np->pid;
-			  shared[j].pairs[k].pos = i;		// ============= i is ok>?  ============= //
+			  shared[j].pairs[k].pos = i+1;		// ============= i is ok>?  ============= //
 			  shared[j].counter++;
+		  }
+		  else{
+			  cprintf("Fork failed k=%d,c=%d\n",k,shared[i].counter);
+			  kfree(np->kstack);
+		          np->kstack = 0;
+		          np->state = UNUSED;
+		          release(&slk);
+			  return -1;
 		  }
 	  }
   }

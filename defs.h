@@ -9,7 +9,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-
+struct sh_key;
+typedef struct sh_key* sh_key_t;
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -120,8 +121,8 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-void*		shmget(char*);
-int		shmrem(char*);
+void*		shmget(sh_key_t);
+int		shmrem(sh_key_t);
 // swtch.S
 void            swtch(struct context**, struct context*);
 

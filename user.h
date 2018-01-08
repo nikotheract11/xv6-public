@@ -1,7 +1,8 @@
 struct stat;
 struct rtcdate;
 struct sem_t;
-
+struct sh_key;
+struct sh_key_t;
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
@@ -24,8 +25,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-void* shmget(int b,char a[16]);
-int shmrem(int b,char*);
+void* shmget(struct sh_key*);
+int shmrem(struct sh_key*);
 void sem_init(struct sem_t*,int);
 void sem_up(struct sem_t*);
 void sem_down(struct sem_t*);

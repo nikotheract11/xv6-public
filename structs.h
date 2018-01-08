@@ -1,4 +1,8 @@
-typedef char sh_key_t[16];
+//typedef char sh_key_t[16];
+struct sh_key{
+	char key[16];
+};
+typedef struct sh_key* sh_key_t;
 
 struct pair {
         int pid;
@@ -7,7 +11,7 @@ struct pair {
 
 typedef struct pair pair;
 struct sh_page {
-	char key[16];
+	sh_key_t key;
 	pair pairs[16];
 	int counter;
 	void* pa;

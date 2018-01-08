@@ -3,12 +3,9 @@
 #include "user.h"
 #include "spinlock.h"
 #include "sem.h"
+#include "structs.h"
 void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
         int readers=0;
-        //sem_t *r_sem,*w_sem;
-//      getData(&init_byte,&readers,w_sem,r_sem);
-        //r_sem = (sem_t*)(addr + sizeof(char)) ;
-        //w_sem = (sem_t*)(r_sem + sizeof(sem_t));
         sem_down(r_sem);
 
         readers++;
@@ -21,11 +18,6 @@ void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
 
 void rel_r(char *addr,sem_t *r_sem,sem_t *w_sem){
         int readers=0;
-     //   sem_t *r_sem,*w_sem;
-  //      getData(&init_byte,&readers,w_sem,r_sem);
-       // r_sem = (sem_t*)(addr + sizeof(char)) ;
-       // w_sem = (sem_t*)(r_sem + sizeof(sem_t));
-
         sem_down(r_sem);
 
         readers--;
@@ -39,9 +31,12 @@ void rel_r(char *addr,sem_t *r_sem,sem_t *w_sem){
 	int
 main(void)
 {
-        char key[15]="11111111111";
+        //char key[15]="11111111111";
+	struct sh_key key;
+	strcpy(key.key,"11111111111");
         char *addr;
-        addr = (char*)shmget(21,key);
+        addr = (char*)shmget(&key);
+	if((int)addr == -1) exit();
 	for(int i=0;i<1000000000;i++){
                 for(int j=1;j<100000000;j++){
                         for(int h=0;h<100000000;h++){
@@ -68,7 +63,7 @@ main(void)
 //	gets(&f,100);
 	//memmove(&j,add,sizeof(int));
 	printf(1,"+++++=%d\n",i);
-	shmrem(1,key);
+//	shmrem(&key);
 	for(int i=0;i<10000000000;i++){
                 for(int j=1;j<10000000000;j++){
                         for(int h=0;h<10000000000;h++){

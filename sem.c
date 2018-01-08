@@ -43,6 +43,7 @@ sys_sem_up(void){
 
 	acquire(&sem->lk);
 	sem->locked++;
+	wakeup(sem);
 	release(&sem->lk);
 	return 0;
 

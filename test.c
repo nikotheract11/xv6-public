@@ -3,6 +3,7 @@
 #include "user.h"
 #include "spinlock.h"
 #include "sem.h"
+#include "structs.h"
 struct a{
 	int val;
 	int pos[10];
@@ -15,10 +16,13 @@ int
 main(void)
 {
 	sem_t r_sem,w_sem;
-	char key[15]="11111111111";
+//	char key[15]="11111111111";
 	char *addr;
+	struct sh_key key;
+	strcpy(key.key,"11111111111");
+	printf(1,"%s\n",key.key);
 	
-	addr = (char*)shmget(11,key);
+	if((addr = (char*)shmget(&key))<(char*)0) exit();
 	int i=1997;
 //	int jj=sizeof(char) + 2*sizeof(sem_t) + sizeof(int);
 //	printf(1,"jjjjj=%d\n",addr[jj]);
@@ -27,6 +31,10 @@ main(void)
 	acq_w(&w_sem);
 	memmove(addr,&i,sizeof(int));
 	rel_w(&w_sem);
+	if(fork()<0) exit();
+	if(fork()<0) exit();
+	if(fork()<0)exit();
+
 	for(i=0;i<10;i++){
 		if(A[i].val != 0) printf(1,"--------------\n");
 	}
