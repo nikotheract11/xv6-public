@@ -1,4 +1,3 @@
-//typedef char sh_key_t[16];
 struct sh_key{
 	char key[16];
 };

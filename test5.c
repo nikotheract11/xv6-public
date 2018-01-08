@@ -18,15 +18,17 @@ main(void)
 	sem_t r_sem,w_sem;
 	char *addr;
 	struct sh_key key;
-	strcpy(key.key,"11111111111");
-	
+        strcpy(key.key,"11111111111");//	strcpy(key.key,"1110000001111111");
+	printf(1,"s=%s\n",key.key);
 	if((addr = (char*)shmget(&key))<(char*)0) exit();
-	int i=1997;
+	char buff[100] = "This is a shared memory test";
 	addr=setupsems(addr,&r_sem,&w_sem);
 
 	acq_w(addr,&w_sem);
-	memmove(addr,&i,sizeof(int));
+	strcpy(addr,buff);//,100*sizeof(char));
 	rel_w(addr,&w_sem);
+	printf(1,"s=%s\n",addr);
+
 //	if(fork()<0) exit();
 //	if(fork()<0) exit();
 //	if(fork()<0) exit();
@@ -41,10 +43,6 @@ main(void)
 			}
                 }
         }
-	int j;
-	memmove(&j,addr,sizeof(int));
-
-	printf(1,"j=%d\n",j);
 	exit();
 }
 

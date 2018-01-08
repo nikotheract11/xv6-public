@@ -4,6 +4,19 @@
 #include "spinlock.h"
 #include "sem.h"
 #include "structs.h"
+
+void acq_w(char* addr,sem_t *w_sem){
+        sem_down(w_sem);
+        memmove(addr + sizeof(char)+sizeof(sem_t),w_sem,sizeof(sem_t));
+
+
+}
+
+
+void rel_w(char* addr,sem_t *w_sem){
+        sem_up(w_sem);
+        memmove(addr + sizeof(char)+sizeof(sem_t),w_sem,sizeof(sem_t));
+}
 void acq_r(char* addr,sem_t *r_sem,sem_t *w_sem){
         int readers=0;
         sem_down(r_sem);
@@ -42,20 +55,29 @@ int
 main(void)
 {
 	struct sh_key key;
-	strcpy(key.key,"11111111111");
-	char *add=(char*)shmget(&key);
-	if((int)add < 0) exit();
-	int i;
+        strcpy(key.key,"11111111111");
+        char *addr;
+        addr = (char*)shmget(&key);
+        if((int)addr == -1) exit();
 	sem_t r_sem,w_sem;
-        memmove(&r_sem,&add[sizeof(char)],sizeof(sem_t));
-        memmove(&w_sem,&add[sizeof(char)+sizeof(sem_t)],sizeof(sem_t));
-	int j;
-	 j=sizeof(char) + 2*sizeof(sem_t)+ sizeof(int);
-	acq_r(add,&r_sem,&w_sem);
-	memmove(&i,&add[j],sizeof(int));
+        memmove(&r_sem,&addr[sizeof(char)],sizeof(sem_t));
+        memmove(&w_sem,&addr[sizeof(char)+sizeof(sem_t)],sizeof(sem_t));
+	int i,j=3;
+        memmove(&i,&j,sizeof(int));
+        j=sizeof(char) + 2*sizeof(sem_t)+ sizeof(int);
 
-	rel_r(add,&r_sem,&w_sem);
-        printf(1,"i=%d\n",i);
-        exit();
+	acq_r(addr,&r_sem,&w_sem);
+        memmove(&i,&addr[j],sizeof(int));
+        rel_r(addr,&r_sem,&w_sem);
+	printf(1,"test4 before:%d ",i);
+
+	acq_w(addr,&w_sem);
+	i=2018;
+	memmove(&addr[j],&i,sizeof(int));
+	rel_w(addr,&w_sem);
+	printf(1,"after should be:%d\n",i);
+	exit();
+
 }
+
 

@@ -30,12 +30,13 @@ static void wakeup1(void *chan);
 void*
 shmget(sh_key_t key)
 {
-        int i,counter=0;//,pos;
+        int i,counter=0;
         void *va,*pa=0;                                                                 // virtual address
         pde_t *pgdir = myproc()->pgdir;                                                                     // first empty pos
         char feflag=0;
 	acquire(&slk);
 	for(i=0;i<32;i++){
+		if(shared[i].counter != 0) cprintf("k=%s\n",(shared[i].key)->key);
 		if(shared[i].counter != 0 && !strncmp(key->key,(shared[i].key)->key,15)){
 			feflag = 1;
 			counter = shared[i].counter;
@@ -52,7 +53,6 @@ shmget(sh_key_t key)
 		return (void*)-1;
 	}
 	if(feflag == 0){
-		//strncpy(shared[i].key,key->key,15);
 		shared[i].key=key;
 		pa = kalloc();
 		shared[i].pa=pa;
@@ -65,8 +65,6 @@ shmget(sh_key_t key)
 			break;
 		}
 	}
-	//va = (void*) (KERNBASE - (j+1)*PGSIZE); 
-	//if(map(pgdir, (char*)va, PGSIZE, V2P(pa), PTE_W|PTE_U) < 0) return (void*)-1;
 	int k;
 	for(k=0;k<16;k++)
 		if(shared[i].pairs[k].pos==0) 
@@ -96,6 +94,7 @@ shmget(sh_key_t key)
 	shared[i].pairs[k].pid = myproc()->pid;
 	shared[i].pairs[k].pos = j+1;
 	shared[i].counter=++counter;
+	cprintf("counter=%d\n",shared[i].counter);
 	release(&slk);
 	return va;
 }
