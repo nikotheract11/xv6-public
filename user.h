@@ -25,7 +25,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 void* shmget(int b,char a[16]);
-int shmrem(char*);
+int shmrem(int b,char*);
 void sem_init(struct sem_t*,int);
 void sem_up(struct sem_t*);
 void sem_down(struct sem_t*);

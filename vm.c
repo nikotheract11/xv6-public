@@ -287,7 +287,7 @@ freevm(pde_t *pgdir)
 
   if(pgdir == 0)
     panic("freevm: no pgdir");
-  deallocuvm(pgdir, KERNBASE,0);//-33*PGSIZE, 0);	// ==================== 33 OR 32 ? ==================== //
+  deallocuvm(pgdir, KERNBASE-33*PGSIZE, 0);	// ==================== 33 OR 32 ? ==================== //
   for(i = 0; i < NPDENTRIES; i++){
     if(pgdir[i] & PTE_P){			// =============== this kfree() affects? ===============
       char * v = P2V(PTE_ADDR(pgdir[i]));

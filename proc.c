@@ -34,7 +34,7 @@ shmget(char key[16])
         void *va,*pa=0;                                                                 // virtual address
         pde_t *pgdir = myproc()->pgdir;                                                                     // first empty pos
         char feflag=0;
-
+	acquire(&slk);
 	for(i=0;i<32;i++){
 		if(shared[i].counter != 0 && !strncmp(key,shared[i].key,15)){
 			feflag = 1;
@@ -69,7 +69,7 @@ shmget(char key[16])
 	shared[i].pairs[k].pid = myproc()->pid;
 	shared[i].pairs[k].pos = j+1;
 	shared[i].counter=++counter;
-
+	release(&slk);
 	for(i=0;i<32;i++)
 		cprintf("%d  ",shared[i].counter);
 	return va;
@@ -78,7 +78,7 @@ shmget(char key[16])
 int
 shmrem(char key[16]){
         int i;
-//	acquire(&slk);
+	//acquire(&slk);
         for(i=0;i<32;i++){
                 if(shared[i].counter == 0)
                         continue;
@@ -94,20 +94,23 @@ shmrem(char key[16]){
 			shared[i].pairs[j].pos = 0;
                 
                 	shared[i].counter--;
+			cprintf("rem=%d\n",shared[i].counter);
 		}
                 pte_t *p ;
-		p = walk(myproc()->pgdir,(void*)(KERNBASE-myproc()->pos[pos]*PGSIZE),0);
+		p = walk(myproc()->pgdir,(void*)(KERNBASE-(myproc()->pos[pos])*PGSIZE),0);
                 *p = 0;
                 myproc()->pos[pos] = -1;                                         // free space for other sp
         }
         if(shared[i].counter == 0) {                                            // if last, free pa
 		cprintf("kfree=====\n");
                 kfree(shared[i].pa);
+		cprintf("kfree=====\n");
+
                 //shared[i].counter = 0;
 	//	release(&slk);
           //      return 0;
         }
-//	release(&slk);
+	//release(&slk);
 	return 0;
 }
 

@@ -8,27 +8,43 @@
 #include "spinlock.h"                                                                   
 #include "sleeplock.h"   
 #include "sem.h"
-void
-sys_sem_init(sem_t *sem, int value)
+int
+sys_sem_init(void)
 {
+	int a;
+	sem_t *sem;
+	argptr(0,(char**)&sem,sizeof(sem_t));
+	argint(1,&a);
 	initlock(&sem->lk,"semaphore");
-	sem->locked = value;
+	sem->locked = a;
+	return 0;
 }
 
-void
-sys_sem_down(sem_t *sem){
+int
+sys_sem_down(void)
+{
+	sem_t *sem;
+
+        if(argptr(0,(char**)&sem,sizeof(sem_t) < 0)) cprintf("ERROR\n");
 	acquire(&sem->lk);
-	while (sem->locked <= 0){
+	while (sem->locked == 0){
 		sleep(sem,&sem->lk);
 	}
 	sem->locked--;
 	release(&sem->lk);
+	return 0;
+
 }
 
-void
-sys_sem_up(sem_t *sem){
+int
+sys_sem_up(void){
+	sem_t *sem;
+        argptr(0,(char**)&sem,sizeof(sem_t));
+
 	acquire(&sem->lk);
 	sem->locked++;
 	release(&sem->lk);
+	return 0;
+
 }
 

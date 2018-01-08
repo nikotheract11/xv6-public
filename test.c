@@ -8,23 +8,25 @@ struct a{
 	int pos[10];
 } A[10];
 
-void acq_w(char *addr);
-void rel_w(char *addr);
-void setupsems(char* addr);
+void acq_w(sem_t *addr);
+void rel_w(sem_t *addr);
+char* setupsems(char* addr,sem_t*,sem_t*);
 int
 main(void)
 {
-	sem_t sem;
-	sem_init(&sem,9);
+	sem_t r_sem,w_sem;
 	char key[15]="11111111111";
 	char *addr;
 	
 	addr = (char*)shmget(11,key);
 	int i=1997;
-//	setupsems(addr);
-//	acq_w(addr);
+//	int jj=sizeof(char) + 2*sizeof(sem_t) + sizeof(int);
+//	printf(1,"jjjjj=%d\n",addr[jj]);
+	addr=setupsems(addr,&r_sem,&w_sem);
+
+	acq_w(&w_sem);
 	memmove(addr,&i,sizeof(int));
-//	rel_w(addr);
+	rel_w(&w_sem);
 	for(i=0;i<10;i++){
 		if(A[i].val != 0) printf(1,"--------------\n");
 	}
@@ -46,24 +48,24 @@ main(void)
 	exit();
 }
 
-void setupsems(char* addr){
+char* setupsems(char* addr,sem_t *r_sem,sem_t *w_sem){
 	char init_byte = 1;
 	int off=sizeof(char),readers=0;
-	sem_t r_sem,w_sem;
-        sem_init(&r_sem,1);
-        sem_init(&w_sem,1);
+//	sem_t *r_sem,*w_sem;
+        sem_init(r_sem,1);
+        sem_init(w_sem,1);
 
 	memmove(addr,&init_byte,sizeof(char));
 	
-	memmove(&addr[off],&r_sem,sizeof(sem_t));
+	memmove(&addr[off],r_sem,sizeof(sem_t));
 	off+=sizeof(sem_t);
 
-	memmove(&addr[off],&w_sem,sizeof(sem_t));
+	memmove(&addr[off],w_sem,sizeof(sem_t));
         off+=sizeof(sem_t);
 
         memmove(&addr[off],&readers,sizeof(int));
         off+=sizeof(int);
-
+	return &addr[off];
 
 }
 
@@ -101,21 +103,21 @@ void rel_r(char *addr){
 	sem_up(r_sem);
 }
 
-void acq_w(char *addr){
-        sem_t *w_sem,*r_sem;
+void acq_w(sem_t *w_sem){
+        //sem_t *w_sem,*r_sem;
     //    getData(&init_byte,&readers,w_sem,r_sem);
-	r_sem = (sem_t*)(addr + sizeof(char)) ;
-        w_sem = (sem_t*)(r_sem + sizeof(sem_t));    	
-
+	//r_sem = (sem_t*)(addr + sizeof(char)) ;
+        //w_sem = (sem_t*)(r_sem + sizeof(sem_t));    
+	printf(1,"dd=%d\n",w_sem->locked);
 	sem_down(w_sem);
 
 }
 
 
-void rel_w(char *addr){
-        sem_t *w_sem,*r_sem;
+void rel_w(sem_t *w_sem){
+   //     sem_t *w_sem,*r_sem;
 //        getData(&init_byte,&readers,w_sem,r_sem);
-	r_sem = (sem_t*)(addr + sizeof(char)) ;
-        w_sem = (sem_t*)(r_sem + sizeof(sem_t));
+//	r_sem = (sem_t*)(addr + sizeof(char)) ;
+  //      w_sem = (sem_t*)(r_sem + sizeof(sem_t));
         sem_up(w_sem);
 }
